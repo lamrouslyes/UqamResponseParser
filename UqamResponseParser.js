@@ -30,7 +30,7 @@ exports.parse = function(htmlFragment, callback) {
     }
 
     if (window) {
-      window.close()
+      window.close();
     }
   });
 };
