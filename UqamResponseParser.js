@@ -49,6 +49,7 @@ function parseGroupList(window) {
   var tableList = window.$("table");
   if (tableList.length > 1) {
     var tdList = tableList[1].getElementsByTagName("td");
+
     var group;
 
     var i = 0;
@@ -56,7 +57,6 @@ function parseGroupList(window) {
       var newGroup = false;
       if (tdList[i].getAttribute("colspan")) {
         i++;
-        result.push(group);
         newGroup = true;
         if (i >= tdList.length) {
           break;
@@ -65,6 +65,7 @@ function parseGroupList(window) {
 
       if (newGroup || i === 0) {
         group = {};
+        result.push(group);
         group.groupe = parseInt(tdList[i].textContent, 10);
         group.places_restantes = parseInt(tdList[i + 1].textContent, 10);
         group.seances = [];
