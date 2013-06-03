@@ -14,25 +14,15 @@
  * limitations under the License.
  */
 
-var jsdom = require("jsdom");
-
 exports.parse = function(htmlFragment, callback) {
-  jsdom.env(htmlFragment, ["http://code.jquery.com/jquery.js"], function(err, window) {
-    if (err) {
-      callback(err);
-    } else {
-      var notOffered = window.$("p.rerreur1");
-      if (notOffered.length) {
-        callback(null, {message: notOffered[0].textContent.trim()});
-      } else {
-        callback(null, parseGroupList(window));
-      }
-    }
-
-    if (window) {
-      window.close();
-    }
-  });
+  var error = htmlFragment.match(/<P CLASS="rerreur1">[^<]*<\/P>/g);
+  if (error) {
+    var errorStr = error[0];
+    errorStr = errorStr.replace('<P CLASS="rerreur1">', '').replace("</P>", "").trim();
+    callback(null, {message: errorStr});
+  } else {
+    callback(null, parseGroupList(htmlFragment));
+  }
 };
 
 function courseAlreadyDefined(array, course) {
@@ -44,41 +34,36 @@ function courseAlreadyDefined(array, course) {
   return false;
 }
 
-function parseGroupList(window) {
+function extractDataFromTdElement(element) {
+  var dataPosition = element.indexOf(">") + 1;
+  return element.substr(dataPosition, element.lastIndexOf("<") - dataPosition);
+}
+
+function parseGroupList(html) {
   var result = [];
-  var tableList = window.$("table");
-  if (tableList.length > 1) {
-    var tdList = tableList[1].getElementsByTagName("td");
 
-    var group;
+  var tdList = html.match(/^(?:<td align="center" class="paragraphe">(.+)<\/td>|<td><\/td>|<td>&nbsp;<\/td>)$/mgi);
+  var group;
 
-    var i = 0;
-    while (i < tdList.length) {
-      var newGroup = false;
-      if (tdList[i].getAttribute("colspan")) {
-        i++;
-        newGroup = true;
-        if (i >= tdList.length) {
-          break;
-        }
-      }
+  var i = 0;
+  while (i < tdList.length) {
+    var thisData = extractDataFromTdElement(tdList[i]);
 
-      if (newGroup || i === 0) {
-        group = {};
-        result.push(group);
-        group.groupe = parseInt(tdList[i].textContent, 10);
-        group.places_restantes = parseInt(tdList[i + 1].textContent, 10);
-        group.seances = [];
-      }
+    if (thisData) {
+      group = {};
+      result.push(group);
+      group.groupe = parseInt(thisData, 10);
+      group.places_restantes = parseInt(extractDataFromTdElement(tdList[i + 1]), 10);
+      group.seances = [];
+    }
 
-      var course = {};
-      course.jour = tdList[i + 3].textContent;
-      course.debut = tdList[i + 4].textContent;
-      course.fin = tdList[i + 5].textContent;
-      i += 8;
-      if (!courseAlreadyDefined(group.seances, course)) {
-        group.seances.push(course);
-      }
+    var course = {};
+    course.jour = extractDataFromTdElement(tdList[i + 3]);
+    course.debut = extractDataFromTdElement(tdList[i + 4]);
+    course.fin = extractDataFromTdElement(tdList[i + 5]);
+    i += 8;
+    if (!courseAlreadyDefined(group.seances, course)) {
+      group.seances.push(course);
     }
   }
 
